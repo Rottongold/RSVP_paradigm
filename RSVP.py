@@ -15,8 +15,8 @@ refresh_rate = 144. # Monitor refresh rate (CRITICAL FOR TIMING)
 
 #----------------------------------Define Helper Function--------------------------------------------
 def MsToFrames(ms, fs):
-    dt = 1000 / fs;
-    return np.round(ms / dt).astype(int);
+    dt = 1000 / fs
+    return np.round(ms / dt).astype(int)
 
 # ---------------------------------Initialize lsl ---------------------------------------------------
 info = pylsl.StreamInfo(name='speech_pilot', type='Markers', channel_count=1,
@@ -49,6 +49,14 @@ comp_q = [
     'The phrase "good trade" suggests that the speaker values the car more than the wife'
 ]
 
+keys = [
+    't',
+    'f', 
+    't',
+    't',
+    't'
+]
+
 processed_puns = [pun.strip(' ') for pun in puns]
 
 stimulus_list = []
@@ -57,6 +65,7 @@ for i in np.arange(len(puns)):
     temp_dict = {
         ['pun']: processed_puns[i]
         ['qs']: comp_q[i]
+        ['key']: keys[i]
     }
 
     stimulus_list.append(temp_dict)
@@ -82,6 +91,7 @@ temp_q = visual.TextStim(win, text='', font='Open Sans', units='pix',
                 height=80, color=[1, 1, 1])
 
 # ---------------------------------------Instruction---------------------------------------------
+outlet.push_sample(pylsl.vectorstr(['Instruction']))
 while True:
     Instruction.draw()
     win.flip()
@@ -98,15 +108,56 @@ for stimuli in stimulus_list:
 
     stim = stimuli['pun']
     comp = stimuli['qs']
+    key = stimuli['key']
 
 
-    # 500 fixation cross before the stimulus
+    outlet.push_sample(pylsl.vectorstr(['Fixation']))
+    
+    # 500ms of fixation cross before the stimulus
     for i in range(MsToFrames(500, refresh_rate)):
             fixation.draw()
             win.flip()
 
-    #RVSP paradigm, each word presented for xxx ms followed by ISI = xxx ms
-    #for i in np.arange(len(stim)):
+    #RVSP paradigm, each word presented for 200 ms followed by ISI = 200 ms
+    for i in range(len(stim)):
+
+        outlet.push_sample(pylsl.vectorstr(['Trial']))
+
+        if i == (len(stim) - 1):
+             outlet.push_sample(pylsl.vectorstr(['Critical Word']))
+        
+        stim_text.text = stim[i]
+        
+        # Text presentation
+        for i in range(MsToFrames(200, refresh_rate)):
+            stim_text.draw()
+            win.flip()
+
+        # ISI
+        for i in range(MsToFrames(200, refresh_rate)):
+            fixation.draw()
+            win.flip()
+
+    # 2500ms of fixation cross (or like a pause) before the comprehension question 
+    for i in range(MsToFrames(2500, refresh_rate))
+        win.flip()
+
+    temp_q.text = comp
+
+    outlet.push_sample(pylsl.vectorstr(['Comp_Q']))
+    while True:
+        temp_q.draw()
+        win.flip()
+
+        resp = event.getKeys()
+        if key in resp:
+            outlet.push_sample(pylsl.vectorstr(['T']))
+            break
+        elif key not in resp:
+            outlet.push_sample(pylsl.vectorstr(['F']))
+            break
+        elif 'escape' in keys:
+            core.quit()
 
 # make sure everything is closed down
 win.close()

@@ -57,17 +57,16 @@ keys = [
     't'
 ]
 
-processed_puns = [pun.strip(' ') for pun in puns]
+processed_puns = [pun.split(' ') for pun in puns]
 
 stimulus_list = []
 
 for i in np.arange(len(puns)):
-    temp_dict = {
-        ['pun']: processed_puns[i]
-        ['qs']: comp_q[i]
-        ['key']: keys[i]
-    }
-
+    temp_dict = {}
+    temp_dict['pun'] =  processed_puns[i]
+    temp_dict['qs'] = comp_q[i]
+    temp_dict['key'] = keys[i]
+    
     stimulus_list.append(temp_dict)
 
 shuffle(stimulus_list)
@@ -88,7 +87,7 @@ stim_text = visual.TextStim(win, text='', font='Open Sans', units='pix',
 
 temp_q = visual.TextStim(win, text='', font='Open Sans', units='pix', 
                 pos=(0,0), alignText='center',
-                height=80, color=[1, 1, 1])
+                height=70, color=[1, 1, 1], wrapWidth = 1000)
 
 # ---------------------------------------Instruction---------------------------------------------
 outlet.push_sample(pylsl.vectorstr(['Instruction']))
@@ -110,13 +109,12 @@ for stimuli in stimulus_list:
     comp = stimuli['qs']
     key = stimuli['key']
 
-
     outlet.push_sample(pylsl.vectorstr(['Fixation']))
     
     # 500ms of fixation cross before the stimulus
     for i in range(MsToFrames(500, refresh_rate)):
-            fixation.draw()
-            win.flip()
+        fixation.draw()
+        win.flip()
 
     #RVSP paradigm, each word presented for 200 ms followed by ISI = 200 ms
     for i in range(len(stim)):
@@ -139,28 +137,34 @@ for stimuli in stimulus_list:
             win.flip()
 
     # 2500ms of fixation cross (or like a pause) before the comprehension question 
-    for i in range(MsToFrames(2500, refresh_rate))
+    for i in range(MsToFrames(2500, refresh_rate)):
+        fixation.draw()
         win.flip()
 
     temp_q.text = comp
 
     outlet.push_sample(pylsl.vectorstr(['Comp_Q']))
+    
     while True:
         temp_q.draw()
         win.flip()
 
         resp = event.getKeys()
-        if key in resp:
-            outlet.push_sample(pylsl.vectorstr(['T']))
-            break
-        elif key not in resp:
-            outlet.push_sample(pylsl.vectorstr(['F']))
-            break
-        elif 'escape' in keys:
-            core.quit()
+        
+        if resp:  
+            if 'escape' in resp:
+                core.quit()
+            
+            if key in resp:
+                outlet.push_sample(pylsl.vectorstr(['T']))
+                break
+            elif key not in resp:
+                outlet.push_sample(pylsl.vectorstr(['F']))
+                break
 
-# make sure everything is closed down
-win.close()
-core.quit()
+
+## make sure everything is closed down
+#win.close()
+#core.quit()
 
     
